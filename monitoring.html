@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>모니터링 페이지</title>
+    <style>
+         .progress-bar {
+        width: 50px;
+        height: 50px;
+        background-color: #ccc;
+        border-radius: 50%; /* 원형 모양으로 만듦 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 20px;
+    }
+
+    .progress-green {
+        background-color: green;
+        color: white;
+    }
+
+    .progress-orange {
+        background-color: orange;
+        color: white;
+    }
+
+    .progress-red {
+        background-color: red;
+        color: white;
+    }
+ 
+
+
+        .data-container {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            overflow-y: auto; /* 세로 스크롤 표시 */
+        }
+
+
+        .data-box {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .data-box h3 {
+            flex: 2;
+            font-size: 16px;
+        }
+
+        .data-box span {
+            flex: 3;
+            font-size: 16px;
+        }
+
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .vehicle-container {
+            flex: 1;
+        }
+
+        .acu-container {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>모니터링 페이지</h1>
+
+    
+
+    <!-- 타임스탬프 표시 -->
+    <div class="data-container">
+        <h2>타임스탬프</h2>
+        <span id="timestamp">yyyy-mm-dd hh:mm:ss</span>
+    </div>
+
+    <div class="data-container">
+        <h2>이상상태 감지 시스템</h2>
+        <div id="progress-bar" class="progress-bar progress-green">
+            <i class="fas fa-traffic-light"></i> <!-- Font Awesome 신호등 아이콘 -->
+        </div>
+    </div>
+ 
+
+    <!-- Vehicle와 ACU 섹션 (가로로 나란히) -->
+    <div class="flex-container">
+        <div class="vehicle-container">
+            <div class="data-container">
+                <h2>Vehicle</h2>
+                <div class="vehicle-data data-box">
+                    <h3>자차속도:</h3>
+                    <span id="vehicle-speed">0</span>
+                </div>
+                <div class="vehicle-data data-box">
+                    <h3>조향각도:</h3>
+                    <span id="steering-angle">0</span>
+                </div>
+                <div class="vehicle-data data-box">
+                    <h3>조향각 토크:</h3>
+                    <span id="steering-torque">0</span>
+                </div>
+                <div class="data-container">
+                    <h2>조향각도 그래프</h2>
+                    <div class="chart-container">
+                        <canvas id="steering-angle-chart" class="chart"></canvas>
+                    </div>
+                </div>
+                <div class="data-container">
+                    <h2>조향각도 토크 그래프</h2>
+                    <div class="chart-container">
+                        <canvas id="steering-torque-chart" class="chart"></canvas>
+                    </div>
+                </div>
+ 
+                
+            </div>
+        </div>
+        <div class="acu-container">
+            <div class="data-container">
+                <h2>ACU</h2>
+                <div class="acu-data data-box">
+                    <h3>전방타겟 차량 충동예상시간:</h3>
+                    <span id="ttc-of-front-vehicle">0</span>
+                </div>
+                <div class="acu-data data-box">
+                    <h3>전방타겟차량거리:</h3>
+                    <span id="distance-of-front-vehicle">0</span>
+                </div>
+                <div class="acu-data data-box">
+                    <h3>전방타겟 차량속도:</h3>
+                    <span id="velocity-of-front-vehicle">0</span>
+                </div>
+                <div class="data-container">
+                    <h2>전방타겟차량거리 그래프</h2>
+                    <div class="chart-container">
+                    <canvas id="distance-of-front-vehicle-chart" class="chart"></canvas>
+                </div>
+                <div class="data-container">
+                    <h2>전방타겟차량속도 그래프</h2>
+                    <div class="chart-container">
+                    <canvas id="velocity-of-front-vehicle-chart" class="chart"></canvas>
+                </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- JavaScript 그래프 초기화와 업데이트 코드 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+
+  
+        // 라인 차트 초기화 함수
+        function initializeLineChart(chartId, label, color) {
+            return new Chart(document.getElementById(chartId), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: color,
+                        borderWidth: 2,
+                        fill: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '시간'
+                            },
+                            maxTicksLimit: 10,
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: label
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 라인 차트 업데이트 함수
+        function updateLineChart(chart, label, dataPoint) {
+            // 현재 타임스탬프 가져오기 (X-축에 표시)
+            const now = new Date();
+            const timestamp = now.toTimeString().split(' ')[0];
+
+            // 새 데이터 포인트 추가
+            chart.data.labels.push(timestamp);
+            chart.data.datasets[0].data.push(dataPoint);
+
+             
+            // 그래프 업데이트
+            chart.update();
+        }
+
+        // 모든 데이터 행을 저장할 배열
+        let dataRows = [];
+        // 이전에 표시한 데이터의 마지막 인덱스를 추적
+        let lastDisplayedIndex = -1;
+
+        // 현재 데이터 행으로 UI를 업데이트하는 함수
+        function updateUIWithCurrentDataRow() {
+            if (dataRows.length > 0) {
+                lastDisplayedIndex = (lastDisplayedIndex + 1) % dataRows.length;
+                const currentData = dataRows[lastDisplayedIndex];
+
+                document.getElementById('vehicle-speed').textContent = currentData.egovehiclespeedmps;
+                document.getElementById('steering-angle').textContent = currentData.steeringangledeg;
+                document.getElementById('steering-torque').textContent = currentData.steeringtorque;
+                document.getElementById('ttc-of-front-vehicle').textContent = currentData.ttcoffrontvehicles;
+                document.getElementById('distance-of-front-vehicle').textContent = currentData.distanceoffrontvehiclem;
+                document.getElementById('velocity-of-front-vehicle').textContent = currentData.velocityoffrontvehiclemps;
+
+                const timestampElement = document.getElementById('timestamp');
+                // 타임스탬프를 yyyy-mm-dd hh:mm:ss 형식으로 업데이트
+                timestampElement.textContent = currentData.year + '-' + currentData.month + '-' + currentData.day +
+                    ' ' + currentData.hour + ':' + currentData.minute + ':' + currentData.second;
+
+                updateProgressBar(currentData.ttcoffrontvehicles);
+
+                // 조향각도 그래프 업데이트
+                if (currentData.steeringangledeg) {
+                    updateLineChart(steeringAngleChart, '조향각도 (deg)', currentData.steeringangledeg);
+                }
+
+                // 조향각 토크 그래프 업데이트
+                if (currentData.steeringtorque) {
+                    updateLineChart(steeringTorqueChart, '조향각 토크', currentData.steeringtorque);
+                }
+
+                // 전방타겟차량거리 그래프 업데이트
+                if (currentData.distanceoffrontvehiclem) {
+                    updateLineChart(distanceOfFrontVehicleChart, '전방타겟차량거리', currentData.distanceoffrontvehiclem);
+                }
+
+                // 전방타겟차량속도 그래프 업데이트
+                if (currentData.velocityoffrontvehiclemps) {
+                    updateLineChart(velocityOfFrontVehicleChart, '전방타겟차량속도', currentData.velocityoffrontvehiclemps);
+                }
+            } else {
+                console.error('데이터를 찾을 수 없습니다.');
+            }
+        }
+
+        // 프로그레스 바 업데이트 함수
+        function updateProgressBar(y_pred_rf) {
+            var progressBar = document.getElementById('progress-bar');
+            var progressBarText = '';
+            if (y_pred_rf >= 0 && y_pred_rf <= 0.5) {
+                progressBarText = '';
+                progressBar.className = 'progress-bar progress-green';
+         } else if (y_pred_rf > 0.5 && y_pred_rf <= 0.8) {
+              progressBarText = '경고';
+              progressBar.className = 'progress-bar progress-orange';
+         } else if (y_pred_rf > 0.8) {
+              progressBarText = '위험';
+              progressBar.className = 'progress-bar progress-red';
+        } else {
+             
+            // 다른 경우 처리 (선택 사항)
+              progressBarText = '보통';
+              progressBar.className = 'progress-bar progress-green';
+        }
+
+        progressBar.textContent = progressBarText;
+        }
+
+         // 페이지 로드 시 이상상태 감지가 시작됩니다
+         window.addEventListener('load', () => {
+            fetch('/get_predictions')
+                .then(response => response.json())
+                .then(predictions => {
+                    if (predictions && predictions.analysis_result) {
+                    const analysisResult = predictions.analysis_result[0];
+                    updateProgressBar(analysisResult);
+                } else {
+                    console.error('예측 결과를 가져올 수 없습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('예측 결과를 가져오는 중 오류가 발생했습니다:', error);
+            });
+    });
+
+
+const steeringAngleChart = new Chart(document.getElementById('steering-angle-chart'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '조향각도 ',
+            data: [],
+            borderColor: 'blue',
+            borderWidth: 2,
+            fill: false,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,  // 종횡비 비유지 설정 해제
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: '시간'
+                },
+                maxTicksLimit: 10,
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: '조향각도'
+                }
+            }
+        }
+    }
+});
+
+// 조향각 토크 그래프 초기화 함수
+const steeringTorqueChart = new Chart(document.getElementById('steering-torque-chart'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '조향각 토크',
+            data: [],
+            borderColor: 'green',
+            borderWidth: 2,
+            fill: false,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: '시간'
+                },
+                maxTicksLimit: 10,
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: '조향각 토크'
+                }
+            }
+        }
+    }
+});
+
+// 전방타겟차량거리 그래프 초기화 함수
+const distanceOfFrontVehicleChart = new Chart(document.getElementById('distance-of-front-vehicle-chart'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '전방타겟차량거리',
+            data: [],
+            borderColor: 'orange',
+            borderWidth: 2,
+            fill: false,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: '시간'
+                },
+                maxTicksLimit: 10,
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: '전방타겟차량거리'
+                }
+            }
+        }
+    }
+});
+
+// 전방타겟차량속도 그래프 초기화 함수
+const velocityOfFrontVehicleChart = new Chart(document.getElementById('velocity-of-front-vehicle-chart'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '전방타겟차량속도',
+            data: [],
+            borderColor: 'red',
+            borderWidth: 2,
+            fill: false,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: '시간'
+                },
+                maxTicksLimit: 10,
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: '전방타겟차량속도'
+                }
+            }
+        }
+    }
+});
+
+
+// 조향각도 그래프 업데이트 함수
+function updateSteeringAngleGraph(angle) {
+    // 현재 타임스탬프 가져오기 (X-축에 표시)
+    const now = new Date();
+    const timestamp = now.toTimeString().split(' ')[0];
+
+// 조향각 토크 그래프 업데이트 함수
+function updateSteeringTorqueGraph(torque) {
+    const chart = steeringTorqueChart;
+    updateLineChart(chart, torque);
+}
+
+// 전방타겟차량거리 그래프 업데이트 함수
+function updateDistanceOfFrontVehicleGraph(distance) {
+    const chart = distanceOfFrontVehicleChart;
+    updateLineChart(chart, distance);
+}
+
+// 전방타겟차량속도 그래프 업데이트 함수
+function updateVelocityOfFrontVehicleGraph(velocity) {
+    const chart = velocityOfFrontVehicleChart;
+    updateLineChart(chart, velocity);
+}
+
+    // 새 데이터 포인트 추가
+    steeringAngleChart.data.labels.push(timestamp);
+    steeringAngleChart.data.datasets[0].data.push(angle);
+
+    // 그래프 업데이트
+    steeringAngleChart.update();
+}
+
+        function fetchDataAndUpdateUI() {
+            fetch('/get_data')
+                .then(response => response.json())
+                .then(data => {
+                    // console.log(data); // 데이터 확인용 로그
+                    
+                    if (data && data.length > 0) {
+                        dataRows = data;
+                        currentDataRowIndex = 0;
+                        updateUIWithCurrentDataRow();
+
+                        // 조향각도 그래프 업데이트
+                         const steeringAngle = data[0].steeringangledeg; // 첫 번째 데이터의 조향각도를 가져옴
+                         updateSteeringAngleGraph(steeringAngle);
+                  } else {
+                         console.error('데이터를 찾을 수 없습니다.');
+             }
+        })
+        .catch(error => {
+            console.error('데이터를 가져오는 중 오류가 발생했습니다:', error);
+        });
+}
+
+function updateProgressBar(analysisResult) {
+    var progressBar = document.getElementById('progress-bar');
+    var progressBarText = '보통';
+
+    if (analysisResult instanceof Array && analysisResult.length > 0) {
+        analysisResult = analysisResult[0]; // 배열에서 첫 번째 요소를 가져옵니다.
+    }
+
+    if (analysisResult === '경고') {
+        progressBarText = '경고';
+        progressBar.className = 'progress-bar progress-orange';
+    } else if (analysisResult === '위험') {
+        progressBarText = '위험';
+        progressBar.className = 'progress-bar progress-red';
+    } else {
+        progressBarText = '보통';
+        progressBar.className = 'progress-bar progress-green';
+    }
+
+    progressBar.textContent = progressBarText;
+}
+
+    // 이제 fetchPredictionsAndUpdateUI 함수를 추가합니다.
+    function fetchPredictionsAndUpdateUI() {
+        fetch('/get_predictions')     
+            .then(response => response.json())
+            .then(predictions => {
+                if (predictions && predictions.analysis_result) {
+                    const analysisResult = predictions.analysis_result[0];
+                    updateProgressBar(analysisResult);
+                    // 데이터 확인용 로그를 추가합니다.
+                    // console.log('analysis_result:', predictions);
+                } else {
+                    console.error('예측 결과를 가져올 수 없습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('예측 결과를 가져오는 중 오류가 발생했습니다:', error);
+            });
+       
+    }
+
+
+    // 페이지 로드 시 데이터 업데이트가 시작됩니다
+    window.addEventListener('load', () => {
+    fetchDataAndUpdateUI();  // 기존 데이터 가져오기
+    fetchPredictionsAndUpdateUI();  // 예측 결과 가져오기
+    // 100 밀리초마다 새 데이터를 가져옵니다.
+    setInterval(fetchDataAndUpdateUI, 100);  
+    // 예측 결과 업데이트
+    // setInterval(fetchPredictionsAndUpdateUI, 200);
+});
+
+
+
+    </script>
+</body>
+</html>

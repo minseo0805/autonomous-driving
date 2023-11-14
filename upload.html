@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>자율주행 이상상태 분석판단 시스템</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .button-spacing {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>자율주행 이상상태 분석판단 시스템</h1>
+        <p style="text-align: center;">모니터링 및 분석을 지원합니다. 파일을 업로드하고 모니터링을 시작하세요.</p>
+
+
+        <div class="button-container">
+            <!-- 파일 업로드 버튼를 파일 선택 대화 상자로 수정 -->
+            <input type="file" id="file-input" style="display: none;">
+            <button class="button button-spacing" id="choose-file-button">파일 선택</button>
+            <button class="button button-spacing" id="upload-button" style="display: none;">파일 업로드</button>
+            <a href="monitoring.html"><button class="button" id="monitoring-button">모니터링 시작</button></a>
+        </div>
+    </div>
+
+    <script>
+        // 파일 선택 버튼 클릭 시
+        document.getElementById("choose-file-button").addEventListener("click", function() {
+            document.getElementById("file-input").click();
+        });
+
+        // 파일 선택 시
+        document.getElementById("file-input").addEventListener("change", function() {
+            const fileInput = document.getElementById("file-input");
+            const uploadButton = document.getElementById("upload-button");
+
+            if (fileInput.files.length > 0) {
+                uploadButton.style.display = "block";
+            } else {
+                uploadButton.style.display = "none";
+            }
+        });
+
+        // 파일 업로드 버튼 클릭 시
+        document.getElementById("upload-button").addEventListener("click", function() {
+            // 선택된 파일 가져오기
+            const fileInput = document.getElementById("file-input");
+            const file = fileInput.files[0];
+
+            // FormData 객체 생성
+            const formData = new FormData();
+            formData.append("file", file);
+
+            // 파일 업로드를 위한 XMLHttpRequest 객체 생성
+            const xhr = new XMLHttpRequest();
+
+            // 파일 업로드 요청 보내기
+            xhr.open("POST", "/upload", true);
+            xhr.send(formData);
+
+            // 파일 업로드 완료 후 메시지 표시
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert("파일 업로드가 완료되었습니다.");
+                } else {
+                    alert("파일 업로드 중 오류가 발생했습니다.");
+                }
+            };
+        });
+    </script>
+</body>
+</html>
