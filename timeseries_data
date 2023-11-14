@@ -1,0 +1,42 @@
+-- Table: public.timeseries_data
+
+-- DROP TABLE IF EXISTS public.timeseries_data;
+
+CREATE TABLE IF NOT EXISTS public.timeseries_data
+(
+    year integer,
+    month integer,
+    day integer,
+    hour integer,
+    minute integer,
+    second integer,
+    millisecond numeric,
+    egovehiclespeedmps numeric,
+    longaccelerationmps2 numeric,
+    lataccelerationmps2 numeric,
+    steeringangledeg numeric,
+    yawratedps numeric,
+    brake numeric,
+    steeringtorque numeric,
+    schoolzoneflag integer,
+    crosswalkflag integer,
+    speedbumpflag integer,
+    currentspeedlimitkph integer,
+    traffictype integer,
+    xtrafficlightm numeric,
+    ytrafficlightm numeric,
+    roadslopelongdeg numeric,
+    roadslopelatdeg numeric,
+    frontvehicleflag integer,
+    distanceoffrontvehiclem numeric,
+    velocityoffrontvehiclemps numeric,
+    cutinoffrontvehicle numeric,
+    cutoutoffrontvehicle numeric,
+    ttcoffrontvehicles numeric,
+    overspeed numeric
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.timeseries_data
+    OWNER to postgres;
